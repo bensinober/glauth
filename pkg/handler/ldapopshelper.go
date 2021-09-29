@@ -112,7 +112,10 @@ func (l LDAPOpsHelper) Bind(h LDAPOpsHandler, bindDN, bindSimplePw string, conn 
 
 		// find the user
 		var foundUser bool // = false
-		foundUser, user, _ = h.FindUser(userName, false)
+		foundUser, user, err = h.FindUser(userName, false)
+		if err != nil {
+			return ldap.LDAPResultInvalidCredentials, err
+		}
 		if !foundUser {
 			h.GetLog().V(2).Info("User not found", "username", userName)
 			return ldap.LDAPResultInvalidCredentials, nil
@@ -121,7 +124,10 @@ func (l LDAPOpsHelper) Bind(h LDAPOpsHandler, bindDN, bindSimplePw string, conn 
 		var group config.Group // = nil
 		var foundGroup bool    // = false
 		if groupName != "" {
-			foundGroup, group, _ = h.FindGroup(groupName)
+			foundGroup, group, err = h.FindGroup(groupName)
+			if err != nil {
+				return ldap.LDAPResultInvalidCredentials, err
+			}
 			if !foundGroup {
 				h.GetLog().V(2).Info("Group not found", "groupname", groupName)
 				return ldap.LDAPResultInvalidCredentials, nil
