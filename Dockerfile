@@ -2,11 +2,11 @@
 # Build Step
 #################
 
-FROM golang:alpine as build
+FROM golang:alpine-glibc as build
 MAINTAINER Ben Yanke <ben@benyanke.com>
 
 # Setup work env
-RUN mkdir /app /tmp/gocode
+RUN mkdir /app /app/plugins /tmp/gocode
 ADD . /app/
 WORKDIR /app
 
@@ -33,6 +33,9 @@ RUN if [ $(uname -m) == x86_64 ]; then make linux64 && cp ./bin/glauth64 /app/gl
 RUN if [ $(uname -m) == aarch64 ]; then make linuxarm64 && cp ./bin/glauth-arm64 /app/glauth; fi
 RUN if [ $(uname -m) == armv7l ]; then make linuxarm32 && cp ./bin/glauth-arm32 /app/glauth; fi
 
+# Make plugins
+RUN make plugins && cp ./bin/*.so /app/glauth/plugins
+
 # Check glauth works
 RUN /app/glauth --version
 
@@ -40,7 +43,7 @@ RUN /app/glauth --version
 # Run Step
 #################
 
-FROM alpine as run
+FROM alpine-glibc as run
 MAINTAINER Ben Yanke <ben@benyanke.com>
 
 # Copies a sample config to be used if a volume isn't mounted with user's config
@@ -48,6 +51,9 @@ ADD sample-simple.cfg /app/config/config.cfg
 
 # Copy binary from build container
 COPY --from=build /app/glauth /app/glauth
+
+# Copy plugins from build container
+COPY --from=build /app/glauth/plugins/*.so /app/plugins/
 
 # Copy docker specific scripts from build container
 COPY --from=build /app/scripts/docker/start.sh /app/docker/
